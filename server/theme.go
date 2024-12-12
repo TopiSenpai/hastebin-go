@@ -26,9 +26,10 @@ func registerTheme(theme Theme) {
 }
 
 type Theme struct {
-	Name        string
-	ColorScheme string
-	Theme       html.Theme
+	Name         string
+	ColorScheme  string
+	Theme        html.Theme
+	CaptureNames []string
 }
 
 func getTheme(r *http.Request) Theme {

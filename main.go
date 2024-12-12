@@ -46,8 +46,11 @@ var (
 	//go:embed server/migrations
 	Migrations embed.FS
 
-	//go:embed styles
-	Styles embed.FS
+	//go:embed languages.toml
+	Languages []byte
+
+	//go:embed queries/*
+	Queries embed.FS
 )
 
 func main() {

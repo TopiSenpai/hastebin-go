@@ -1,0 +1,31 @@
+# Languages configuration
+
+[languages]
+
+[languages.go]
+alt_names = ['golang']
+mime_types = ['text/x-gosrc']
+file_types = ['.go']
+files = []
+grammar_symbol_name = 'go'
+
+[languages.toml]
+alt_names = []
+mime_types = []
+file_types = ['.toml']
+files = []
+grammar_symbol_name = 'toml'
+
+[languages.json]
+alt_names = []
+mime_types = ['application/json']
+file_types = ['.json']
+files = []
+grammar_symbol_name = 'json'
+
+[languages.yaml]
+alt_names = ['yml']
+mime_types = []
+file_types = ['.yaml', '.yml']
+files = []
+grammar_symbol_name = 'yaml'

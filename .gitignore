@@ -1,4 +1,5 @@
 .idea/
+grammars/*
 custom_styles/
 gobin.toml
 .gobin

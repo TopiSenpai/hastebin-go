@@ -19,8 +19,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/go-chi/chi/v5"
-	"github.com/topi314/chroma/v2"
-	"github.com/topi314/chroma/v2/formatters"
 	"github.com/topi314/chroma/v2/lexers"
 	"github.com/topi314/tint"
 
@@ -97,7 +95,6 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, false)
 	theme := getTheme(r)
 
 	var response []DocumentResponse
@@ -106,7 +103,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 		for i, file := range dbFiles {
 			var formatted string
 			if withContent {
-				formatted, err = s.formatFile(file, formatter, theme)
+				formatted, err = s.formatFile(file, s.htmlRenderer, theme)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -165,8 +162,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, true)
-	style := getStyle(r)
+	theme := getTheme(r)
 	fileName := r.URL.Query().Get("file")
 
 	var (
@@ -175,7 +171,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 	)
 	templateFiles := make([]templates.File, len(document.Files))
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.prettyError(w, r, err)
 			return
@@ -236,8 +232,8 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 
 		Lexers: lexers.Names(false),
 		Styles: s.themes,
-		Style:  style.Name,
-		Theme:  style.Theme,
+		Style:  theme.Name,
+		Theme:  theme.ColorScheme,
 
 		Max:        s.cfg.MaxDocumentSize,
 		Host:       r.Host,
@@ -255,8 +251,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 	fileName := r.URL.Query().Get("file")
 
 	if fileName != "" {
@@ -269,7 +264,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-				formatted, err := s.formatFile(file, formatter, style)
+				formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -293,7 +288,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 		Files:   make([]ResponseFile, len(document.Files)),
 	}
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -316,36 +311,19 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, formatterName := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	if len(document.Files) == 1 {
 		file := document.Files[0]
 
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
 		}
 
-		var (
-			contentType string
-			fileName    string
-		)
-		switch formatterName {
-		case "html", "standalone-html":
-			contentType = ezhttp.ContentTypeHTML
-			fileName = file.Name + ".html"
-		case "svg":
-			contentType = ezhttp.ContentTypeSVG
-			fileName = file.Name + ".svg"
-		case "json":
-			contentType = ezhttp.ContentTypeJSON
-			fileName = file.Name + ".json"
-		default:
-			contentType = ezhttp.ContentTypeText
-			fileName = file.Name
-		}
+		contentType := ezhttp.ContentTypeHTML
+		fileName := file.Name + ".html"
 
 		w.Header().Set(ezhttp.HeaderContentDisposition, mime.FormatMediaType("inline", map[string]string{
 			"name":     fileName,
@@ -367,7 +345,7 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 
 	mpw := multipart.NewWriter(w)
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
@@ -379,28 +357,10 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 			"filename": file.Name,
 		}))
 
-		lexer := lexers.Get(file.Language)
-		if lexer == nil {
-			lexer = lexers.Fallback
-		}
-		headers.Set(ezhttp.HeaderLanguage, lexer.Config().Name)
+		language := getLanguage(file.Language)
 
-		var contentType string
-		switch formatterName {
-		case "html", "standalone-html":
-			contentType = ezhttp.ContentTypeHTML
-		case "svg":
-			contentType = ezhttp.ContentTypeSVG
-		case "json":
-			contentType = ezhttp.ContentTypeJSON
-		default:
-			contentType = ezhttp.DefaultContentTyp
-			if len(lexer.Config().MimeTypes) > 0 {
-				contentType = lexer.Config().MimeTypes[0]
-			}
-		}
-
-		headers.Set(ezhttp.HeaderContentType, contentType)
+		headers.Set(ezhttp.HeaderLanguage, language.Highlight.LanguageName)
+		headers.Set(ezhttp.HeaderContentType, ezhttp.ContentTypeHTML)
 
 		part, err := mpw.CreatePart(headers)
 		if err != nil {
@@ -420,51 +380,50 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetDocumentPreview(w http.ResponseWriter, r *http.Request) {
-	document, err := s.getDocument(r, func(documentID string) string {
-		uri := new(url.URL)
-		*uri = *r.URL
-		uri.Path = fmt.Sprintf("/%s/preview", documentID)
-		return uri.String()
-	})
-	if err != nil {
-		s.error(w, r, err)
-		return
-	}
-
-	formatter := formatters.Get("svg")
-	style := getStyle(r)
-	fileName := r.URL.Query().Get("file")
-
-	var currentFile int
-	for i, file := range document.Files {
-		if file.Name == fileName {
-			currentFile = i
-			break
-		}
-	}
-
-	file := document.Files[currentFile]
-	file.Content = s.shortContent(file.Content)
-
-	formatted, err := s.formatFile(file, formatter, style)
-	if err != nil {
-		s.prettyError(w, r, fmt.Errorf("failed to render document preview: %w", err))
-		return
-	}
-
-	png, err := s.convertSVG2PNG(r.Context(), formatted)
-	if err != nil {
-		s.error(w, r, fmt.Errorf("failed to convert document preview: %w", err))
-		return
-	}
-
-	w.Header().Set(ezhttp.HeaderContentType, ezhttp.ContentTypePNG)
-	if r.Method == http.MethodHead {
-		w.Header().Set(ezhttp.HeaderContentLength, strconv.Itoa(len(png)))
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	_, _ = w.Write(png)
+	//document, err := s.getDocument(r, func(documentID string) string {
+	//	uri := new(url.URL)
+	//	*uri = *r.URL
+	//	uri.Path = fmt.Sprintf("/%s/preview", documentID)
+	//	return uri.String()
+	//})
+	//if err != nil {
+	//	s.error(w, r, err)
+	//	return
+	//}
+	//
+	//theme := getTheme(r)
+	//fileName := r.URL.Query().Get("file")
+	//
+	//var currentFile int
+	//for i, file := range document.Files {
+	//	if file.Name == fileName {
+	//		currentFile = i
+	//		break
+	//	}
+	//}
+	//
+	//file := document.Files[currentFile]
+	//file.Content = s.shortContent(file.Content)
+	//
+	//formatted, err := s.formatFile(file, formatter, style)
+	//if err != nil {
+	//	s.prettyError(w, r, fmt.Errorf("failed to render document preview: %w", err))
+	//	return
+	//}
+	//
+	//png, err := s.convertSVG2PNG(r.Context(), formatted)
+	//if err != nil {
+	//	s.error(w, r, fmt.Errorf("failed to convert document preview: %w", err))
+	//	return
+	//}
+	//
+	//w.Header().Set(ezhttp.HeaderContentType, ezhttp.ContentTypePNG)
+	//if r.Method == http.MethodHead {
+	//	w.Header().Set(ezhttp.HeaderContentLength, strconv.Itoa(len(png)))
+	//	w.WriteHeader(http.StatusOK)
+	//	return
+	//}
+	//_, _ = w.Write(png)
 }
 
 func (s *Server) getDocument(r *http.Request, fallbackURL func(documentID string) string) (*database.Document, error) {
@@ -518,8 +477,7 @@ func (s *Server) GetDocumentFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	if language := r.URL.Query().Get("language"); language != "" {
 		lexer := lexers.Get(language)
@@ -528,7 +486,7 @@ func (s *Server) GetDocumentFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	formatted, err := s.formatFile(*file, formatter, style)
+	formatted, err := s.formatFile(*file, s.htmlRenderer, theme)
 	if err != nil {
 		s.error(w, r, err)
 		return
@@ -549,8 +507,7 @@ func (s *Server) GetRawDocumentFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, formatterName := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	lexer := lexers.Get(file.Language)
 	if lexer == nil {
@@ -558,30 +515,14 @@ func (s *Server) GetRawDocumentFile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set(ezhttp.HeaderLanguage, lexer.Config().Name)
 
-	formatted, err := s.formatFile(*file, formatter, style)
+	formatted, err := s.formatFile(*file, s.htmlRenderer, theme)
 	if err != nil {
 		s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 		return
 	}
 
-	var (
-		contentType string
-		fileName    string
-	)
-	switch formatterName {
-	case "html", "standalone-html":
-		contentType = "text/html; charset=UTF-8"
-		fileName = file.Name + ".html"
-	case "svg":
-		contentType = "image/svg+xml"
-		fileName = file.Name + ".svg"
-	case "json":
-		contentType = "application/json"
-		fileName = file.Name + ".json"
-	default:
-		contentType = "text/plain; charset=UTF-8"
-		fileName = file.Name
-	}
+	contentType := "text/html; charset=UTF-8"
+	fileName := file.Name + ".html"
 
 	w.Header().Set(ezhttp.HeaderContentDisposition, mime.FormatMediaType("inline", map[string]string{
 		"name":     fileName,
@@ -662,12 +603,11 @@ func (s *Server) PostDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -731,12 +671,11 @@ func (s *Server) PatchDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatter, _ := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(file, formatter, style)
+		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -956,7 +895,7 @@ func (s *Server) parseDocumentFiles(r *http.Request) ([]RequestFile, error) {
 			files = append(files, RequestFile{
 				Name:      part.FileName(),
 				Content:   string(data),
-				Language:  getLanguage(part.Header.Get(ezhttp.HeaderLanguage), partContentType, part.FileName(), string(data)),
+				Language:  findLanguage(part.Header.Get(ezhttp.HeaderLanguage), partContentType, part.FileName(), string(data)),
 				ExpiresAt: expiresAt,
 			})
 		}
@@ -995,7 +934,7 @@ func (s *Server) parseDocumentFiles(r *http.Request) ([]RequestFile, error) {
 		files = []RequestFile{{
 			Name:      name,
 			Content:   string(data),
-			Language:  getLanguage(language, contentType, params["filename"], string(data)),
+			Language:  findLanguage(language, contentType, params["filename"], string(data)),
 			ExpiresAt: expiresAt,
 		}}
 	}
@@ -1007,46 +946,6 @@ func (s *Server) parseDocumentFiles(r *http.Request) ([]RequestFile, error) {
 		}
 	}
 	return files, nil
-}
-
-func getLanguage(language string, contentType string, fileName string, content string) string {
-	var lexer chroma.Lexer
-	if language != "" {
-		lexer = lexers.Get(language)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
-
-	if contentType != "" && contentType != "application/octet-stream" {
-		lexer = lexers.MatchMimeType(contentType)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
-
-	if contentType != "" {
-		lexer = lexers.Get(contentType)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
-
-	if fileName != "" {
-		lexer = lexers.Match(fileName)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
-
-	if len(content) > 0 {
-		lexer = lexers.Analyse(content)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
-
-	return "plaintext"
 }
 
 func getExpiresAt(query url.Values, header http.Header) (*time.Time, error) {
