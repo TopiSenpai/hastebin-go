@@ -6,33 +6,52 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/topi314/chroma/v2"
-	"github.com/topi314/chroma/v2/styles"
+	"go.gopad.dev/go-tree-sitter-highlight/html"
 
 	"github.com/topi314/gobin/v2/internal/ezhttp"
 )
 
-func getStyle(r *http.Request) *chroma.Style {
-	var styleName string
-	if styleCookie, err := r.Cookie("style"); err == nil {
-		styleName = styleCookie.Value
+func init() {
+	registerTheme(Theme{
+		Name:        "default",
+		ColorScheme: "dark",
+		Theme:       html.DefaultTheme(),
+	})
+}
+
+var themes = make(map[string]Theme)
+
+func registerTheme(theme Theme) {
+	themes[theme.Name] = theme
+}
+
+type Theme struct {
+	Name        string
+	ColorScheme string
+	Theme       html.Theme
+}
+
+func getTheme(r *http.Request) Theme {
+	var themeName string
+	if themeCookie, err := r.Cookie("theme"); err == nil {
+		themeName = themeCookie.Value
 	}
-	queryStyle := r.URL.Query().Get("style")
-	if queryStyle != "" {
-		styleName = queryStyle
+	queryTheme := r.URL.Query().Get("theme")
+	if queryTheme != "" {
+		themeName = queryTheme
 	}
 
-	style := styles.Get(styleName)
-	if style == nil {
-		return styles.Fallback
+	theme, ok := themes[themeName]
+	if !ok {
+		return themes["default"]
 	}
 
-	return style
+	return theme
 }
 
 func (s *Server) ThemeCSS(w http.ResponseWriter, r *http.Request) {
-	style := getStyle(r)
-	cssBuff := s.themeCSS(style)
+	theme := getTheme(r)
+	cssBuff := s.themeCSS(theme)
 
 	w.Header().Set(ezhttp.HeaderContentType, ezhttp.ContentTypeCSS)
 	w.Header().Set(ezhttp.HeaderContentLength, strconv.Itoa(len(cssBuff)))
@@ -43,21 +62,20 @@ func (s *Server) ThemeCSS(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(cssBuff))
 }
 
-func (s *Server) themeCSS(style *chroma.Style) string {
+func (s *Server) themeCSS(theme Theme) string {
 	cssBuff := new(bytes.Buffer)
-	background := style.Get(chroma.Background)
-	_, _ = fmt.Fprintf(cssBuff, "html{color-scheme: %s;}", style.Theme)
+	_, _ = fmt.Fprintf(cssBuff, "html{color-scheme: %s;}", theme.ColorScheme)
 	_, _ = fmt.Fprint(cssBuff, ":root{")
-	_, _ = fmt.Fprintf(cssBuff, "--bg-primary: %s;", background.Background.String())
-	_, _ = fmt.Fprintf(cssBuff, "--bg-secondary: %s;", background.Background.BrightenOrDarken(0.07).String())
-	_, _ = fmt.Fprintf(cssBuff, "--nav-button-bg: %s;", background.Background.BrightenOrDarken(0.12).String())
-	_, _ = fmt.Fprintf(cssBuff, "--text-primary: %s;", background.Colour.String())
-	_, _ = fmt.Fprintf(cssBuff, "--text-secondary: %s;", background.Colour.BrightenOrDarken(0.2).String())
-	_, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar: %s;", background.Background.BrightenOrDarken(0.1).String())
-	_, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar-thumb: %s;", background.Background.BrightenOrDarken(0.2).String())
-	_, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar-thumb-hover: %s;", background.Background.BrightenOrDarken(0.3).String())
+	_, _ = fmt.Fprintf(cssBuff, "--bg-primary: %s;", theme.Theme.Background0)
+	_, _ = fmt.Fprintf(cssBuff, "--bg-secondary: %s;", theme.Theme.Background1)
+	_, _ = fmt.Fprintf(cssBuff, "--nav-button-bg: %s;", theme.Theme.Background2)
+	_, _ = fmt.Fprintf(cssBuff, "--text-primary: %s;", theme.Theme.Text0)
+	_, _ = fmt.Fprintf(cssBuff, "--text-secondary: %s;", theme.Theme.Text1)
+	// _, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar: %s;", background.Background.BrightenOrDarken(0.1).String())
+	// _, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar-thumb: %s;", background.Background.BrightenOrDarken(0.2).String())
+	// _, _ = fmt.Fprintf(cssBuff, "--bg-scrollbar-thumb-hover: %s;", background.Background.BrightenOrDarken(0.3).String())
 	_, _ = fmt.Fprint(cssBuff, "}")
 
-	_ = s.htmlFormatter.WriteCSS(cssBuff, style)
+	_ = s.htmlRenderer.RenderCSS(cssBuff, theme.Theme)
 	return cssBuff.String()
 }

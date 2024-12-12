@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v3"
-	"github.com/topi314/chroma/v2/formatters/html"
-	"github.com/topi314/chroma/v2/styles"
 	"github.com/topi314/tint"
+	"go.gopad.dev/go-tree-sitter-highlight/html"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
@@ -26,12 +25,12 @@ import (
 	"github.com/topi314/gobin/v2/server/templates"
 )
 
-func NewServer(version string, debug bool, cfg Config, db *database.DB, signer jose.Signer, tracer trace.Tracer, meter metric.Meter, assets http.FileSystem, htmlFormatter *html.Formatter, standaloneHTMLFormatter *html.Formatter) *Server {
-	var allStyles []templates.Style
-	for _, name := range styles.Names() {
-		allStyles = append(allStyles, templates.Style{
+func NewServer(version string, debug bool, cfg Config, db *database.DB, signer jose.Signer, tracer trace.Tracer, meter metric.Meter, assets http.FileSystem, htmlRenderer *html.Renderer) *Server {
+	var allThemes []templates.Theme
+	for name, theme := range themes {
+		allThemes = append(allThemes, templates.Theme{
 			Name:  name,
-			Theme: styles.Get(name).Theme,
+			Theme: theme.ColorScheme,
 		})
 	}
 
@@ -49,18 +48,17 @@ func NewServer(version string, debug bool, cfg Config, db *database.DB, signer j
 	}
 
 	s := &Server{
-		version:                 version,
-		debug:                   debug,
-		cfg:                     cfg,
-		db:                      db,
-		client:                  client,
-		signer:                  signer,
-		tracer:                  tracer,
-		meter:                   meter,
-		assets:                  assets,
-		styles:                  allStyles,
-		htmlFormatter:           htmlFormatter,
-		standaloneHTMLFormatter: standaloneHTMLFormatter,
+		version:      version,
+		debug:        debug,
+		cfg:          cfg,
+		db:           db,
+		client:       client,
+		signer:       signer,
+		tracer:       tracer,
+		meter:        meter,
+		assets:       assets,
+		themes:       allThemes,
+		htmlRenderer: htmlRenderer,
 	}
 
 	s.server = &http.Server{
@@ -82,22 +80,21 @@ func NewServer(version string, debug bool, cfg Config, db *database.DB, signer j
 }
 
 type Server struct {
-	version                 string
-	debug                   bool
-	cfg                     Config
-	db                      *database.DB
-	server                  *http.Server
-	client                  *http.Client
-	signer                  jose.Signer
-	tracer                  trace.Tracer
-	meter                   metric.Meter
-	assets                  http.FileSystem
-	htmlFormatter           *html.Formatter
-	standaloneHTMLFormatter *html.Formatter
-	styles                  []templates.Style
-	rateLimitHandler        func(http.Handler) http.Handler
-	webhookWaitGroup        sync.WaitGroup
-	cleanupCancel           context.CancelFunc
+	version          string
+	debug            bool
+	cfg              Config
+	db               *database.DB
+	server           *http.Server
+	client           *http.Client
+	signer           jose.Signer
+	tracer           trace.Tracer
+	meter            metric.Meter
+	assets           http.FileSystem
+	htmlRenderer     *html.Renderer
+	themes           []templates.Theme
+	rateLimitHandler func(http.Handler) http.Handler
+	webhookWaitGroup sync.WaitGroup
+	cleanupCancel    context.CancelFunc
 }
 
 func (s *Server) Start() {

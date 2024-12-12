@@ -14,14 +14,11 @@ import (
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/mattn/go-colorable"
-	"github.com/topi314/chroma/v2/formatters"
-	"github.com/topi314/chroma/v2/formatters/html"
-	"github.com/topi314/chroma/v2/lexers"
-	"github.com/topi314/chroma/v2/styles"
 	"github.com/topi314/gomigrate"
 	"github.com/topi314/gomigrate/drivers/postgres"
 	"github.com/topi314/gomigrate/drivers/sqlite"
 	"github.com/topi314/tint"
+	"go.gopad.dev/go-tree-sitter-highlight/html"
 	meternoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
@@ -136,28 +133,9 @@ func main() {
 	loadEmbeddedStyles()
 	loadLocalStyles(cfg.CustomStyles)
 
-	styles.Fallback = styles.Get(cfg.DefaultStyle)
-	lexers.Fallback = lexers.Get("plaintext")
-	htmlFormatter := html.New(
-		html.WithClasses(true),
-		html.ClassPrefix("ch-"),
-		html.Standalone(false),
-		html.InlineCode(false),
-		html.WithNopPreWrapper(),
-		html.WithLineNumbers(true),
-		html.WithLinkableLineNumbers(true, "L"),
-		html.TabWidth(4),
-	)
-	standaloneHTMLFormatter := html.New(
-		html.Standalone(true),
-		html.WithLineNumbers(true),
-		html.WithLinkableLineNumbers(true, "L"),
-		html.TabWidth(4),
-	)
-	formatters.Register("html", htmlFormatter)
-	formatters.Register("html-standalone", standaloneHTMLFormatter)
+	htmlRenderer := html.NewRenderer(nil)
 
-	s := server.NewServer(ver.FormatBuildVersion(Version, Commit, buildTime), cfg.DevMode, cfg, db, signer, tracer, meter, assets, htmlFormatter, standaloneHTMLFormatter)
+	s := server.NewServer(ver.FormatBuildVersion(Version, Commit, buildTime), cfg.DevMode, cfg, db, signer, tracer, meter, assets, htmlRenderer)
 	slog.Info("Gobin started...", slog.String("address", cfg.ListenAddr))
 	go s.Start()
 	defer s.Close()
@@ -225,20 +203,6 @@ func setupLogger(cfg server.LogConfig) {
 
 func loadEmbeddedStyles() {
 	slog.Info("Loading embedded styles")
-	stylesSub, err := fs.Sub(Styles, "styles")
-	if err != nil {
-		slog.Error("Failed to get sub fs for embedded styles", tint.Err(err))
-		return
-	}
-	cStyles, err := styles.LoadFromFS(stylesSub)
-	if err != nil {
-		slog.Error("Failed to load embedded styles", tint.Err(err))
-		return
-	}
-	for _, style := range cStyles {
-		slog.Debug("Loaded embedded style", slog.String("name", style.Name))
-		styles.Register(style)
-	}
 }
 
 func loadLocalStyles(stylesDir string) {
@@ -247,13 +211,4 @@ func loadLocalStyles(stylesDir string) {
 	}
 
 	slog.Info("Loading local styles", slog.String("dir", stylesDir))
-	cStyles, err := styles.LoadFromFS(os.DirFS(stylesDir))
-	if err != nil {
-		slog.Error("Failed to load local styles", tint.Err(err))
-		return
-	}
-	for _, style := range cStyles {
-		slog.Debug("Loaded local style", slog.String("name", style.Name))
-		styles.Register(style)
-	}
 }

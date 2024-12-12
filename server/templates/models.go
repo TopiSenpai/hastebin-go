@@ -30,7 +30,7 @@ type DocumentVars struct {
 	PreviewAlt string
 
 	Lexers []string
-	Styles []Style
+	Styles []Theme
 	Style  string
 	Theme  string
 	Max    int64
@@ -98,7 +98,7 @@ type DocumentVersion struct {
 	Time    string
 }
 
-type Style struct {
+type Theme struct {
 	Name  string
 	Theme string
 }

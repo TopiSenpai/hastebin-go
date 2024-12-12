@@ -98,7 +98,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	formatter, _ := getFormatter(r, false)
-	style := getStyle(r)
+	theme := getTheme(r)
 
 	var response []DocumentResponse
 	for version, dbFiles := range versions {
@@ -106,7 +106,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 		for i, file := range dbFiles {
 			var formatted string
 			if withContent {
-				formatted, err = s.formatFile(file, formatter, style)
+				formatted, err = s.formatFile(file, formatter, theme)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -235,7 +235,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 		Versions:    templateVersions,
 
 		Lexers: lexers.Names(false),
-		Styles: s.styles,
+		Styles: s.themes,
 		Style:  style.Name,
 		Theme:  style.Theme,
 

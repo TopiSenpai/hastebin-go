@@ -2,6 +2,8 @@ module github.com/topi314/gobin/v2
 
 go 1.23
 
+replace github.com/tree-sitter/go-tree-sitter => github.com/gopad-dev/go-tree-sitter v0.0.0-20241124232421-f22ab7977e8c
+
 require (
 	github.com/XSAM/otelsql v0.34.0
 	github.com/a-h/templ v0.2.778
@@ -22,6 +24,7 @@ require (
 	github.com/topi314/gomigrate v0.0.0-20241004214626-bb286a22f06c
 	github.com/topi314/otelchi v0.0.0-20240303215413-6ead809329d9
 	github.com/topi314/tint v0.0.0-20240303212505-44dd4a1b4f7f
+	go.gopad.dev/go-tree-sitter-highlight v0.0.0-20241212010141-660c7ae706ef
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.55.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
 	go.opentelemetry.io/otel v1.30.0
@@ -55,6 +58,7 @@ require (
 	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-pointer v0.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
@@ -69,6 +73,7 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tree-sitter/go-tree-sitter v0.24.0 // indirect
 	go.opentelemetry.io/contrib v1.30.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.30.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
