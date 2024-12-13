@@ -14,7 +14,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/topi314/chroma/v2/lexers"
 
 	"github.com/topi314/gobin/v2/internal/cfg"
 	"github.com/topi314/gobin/v2/internal/ezhttp"
@@ -217,11 +216,5 @@ Will post "hello world!" to the server`,
 
 	if err := cmd.RegisterFlagCompletionFunc("document", documentCompletion); err != nil {
 		log.Printf("failed to register document flag completion func: %s", err)
-	}
-
-	if err := cmd.RegisterFlagCompletionFunc("languages", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return lexers.Names(true), cobra.ShellCompDirectiveNoFileComp
-	}); err != nil {
-		log.Printf("failed to register languages flag completion func: %s", err)
 	}
 }

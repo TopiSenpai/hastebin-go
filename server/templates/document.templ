@@ -58,11 +58,11 @@ templ Document(vars DocumentVars) {
 	                style="display: none;"
 	            }
             >{ vars.Files[vars.CurrentFile].Content }</textarea>
-            <pre id="code"
+            <div id="code" class="hl-hl"
                 if vars.Edit {
                     style="display: none;"
                 }
-            ><code id="code-view" class="ch-chroma">@WriteUnsafe(vars.Files[vars.CurrentFile].Formatted)</code></pre>
+            ><code id="code-view" class="hl-code">@WriteUnsafe(vars.Files[vars.CurrentFile].Formatted)</code></div>
 		</div>
 		<div id="footer">
             <select title="Version" id="version" autocomplete="off">
@@ -91,8 +91,8 @@ templ Document(vars DocumentVars) {
 			</label>
             <select title="Language" id="language" autocomplete="off">
                 <option value="auto" selected?={ vars.Files[vars.CurrentFile].Language == "" }>auto</option>
-                for _, lexer := range vars.Lexers {
-                    <option value={ lexer } selected?={ vars.Files[vars.CurrentFile].Language == lexer }>{ lexer }</option>
+                for _, language := range vars.Languages {
+                    <option value={ language } selected?={ vars.Files[vars.CurrentFile].Language == language }>{ language }</option>
                 }
             </select>
         </div>

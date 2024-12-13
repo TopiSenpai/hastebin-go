@@ -19,7 +19,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 	"github.com/go-chi/chi/v5"
-	"github.com/topi314/chroma/v2/lexers"
 	"github.com/topi314/tint"
 
 	"github.com/topi314/gobin/v2/internal/ezhttp"
@@ -103,7 +102,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 		for i, file := range dbFiles {
 			var formatted string
 			if withContent {
-				formatted, err = s.formatFile(file, s.htmlRenderer, theme)
+				formatted, err = s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -171,7 +170,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 	)
 	templateFiles := make([]templates.File, len(document.Files))
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.prettyError(w, r, err)
 			return
@@ -230,10 +229,10 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 		TotalLength: totalLength,
 		Versions:    templateVersions,
 
-		Lexers: lexers.Names(false),
-		Styles: s.themes,
-		Style:  theme.Name,
-		Theme:  theme.ColorScheme,
+		Languages: getLanguageNames(),
+		Styles:    s.themes,
+		Style:     theme.Name,
+		Theme:     theme.ColorScheme,
 
 		Max:        s.cfg.MaxDocumentSize,
 		Host:       r.Host,
@@ -258,13 +257,10 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 		for _, file := range document.Files {
 			if strings.EqualFold(file.Name, fileName) {
 				if language := r.URL.Query().Get("language"); language != "" {
-					lexer := lexers.Get(language)
-					if lexer != nil {
-						file.Language = lexer.Config().Name
-					}
+					file.Language = getLanguageFallback(language).Config.Name
 				}
 
-				formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+				formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -288,7 +284,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 		Files:   make([]ResponseFile, len(document.Files)),
 	}
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -316,7 +312,7 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 	if len(document.Files) == 1 {
 		file := document.Files[0]
 
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
@@ -330,11 +326,8 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 			"filename": fileName,
 		}))
 
-		lexer := lexers.Get(file.Language)
-		if lexer == nil {
-			lexer = lexers.Fallback
-		}
-		w.Header().Set(ezhttp.HeaderLanguage, lexer.Config().Name)
+		language := getLanguageFallback(file.Language)
+		w.Header().Set(ezhttp.HeaderLanguage, language.Config.Name)
 
 		w.Header().Set(ezhttp.HeaderContentType, contentType)
 		if _, err = w.Write([]byte(formatted)); err != nil {
@@ -345,7 +338,7 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 
 	mpw := multipart.NewWriter(w)
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
@@ -357,7 +350,7 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 			"filename": file.Name,
 		}))
 
-		language := getLanguage(file.Language)
+		language := getLanguageFallback(file.Language)
 
 		headers.Set(ezhttp.HeaderLanguage, language.Highlight.LanguageName)
 		headers.Set(ezhttp.HeaderContentType, ezhttp.ContentTypeHTML)
@@ -480,13 +473,10 @@ func (s *Server) GetDocumentFile(w http.ResponseWriter, r *http.Request) {
 	theme := getTheme(r)
 
 	if language := r.URL.Query().Get("language"); language != "" {
-		lexer := lexers.Get(language)
-		if lexer != nil {
-			file.Language = lexer.Config().Name
-		}
+		file.Language = getLanguageFallback(language).Config.Name
 	}
 
-	formatted, err := s.formatFile(*file, s.htmlRenderer, theme)
+	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme)
 	if err != nil {
 		s.error(w, r, err)
 		return
@@ -509,13 +499,10 @@ func (s *Server) GetRawDocumentFile(w http.ResponseWriter, r *http.Request) {
 
 	theme := getTheme(r)
 
-	lexer := lexers.Get(file.Language)
-	if lexer == nil {
-		lexer = lexers.Fallback
-	}
-	w.Header().Set(ezhttp.HeaderLanguage, lexer.Config().Name)
+	language := getLanguageFallback(file.Language)
+	w.Header().Set(ezhttp.HeaderLanguage, language.Config.Name)
 
-	formatted, err := s.formatFile(*file, s.htmlRenderer, theme)
+	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme)
 	if err != nil {
 		s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 		return
@@ -607,7 +594,7 @@ func (s *Server) PostDocument(w http.ResponseWriter, r *http.Request) {
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -675,7 +662,7 @@ func (s *Server) PatchDocument(w http.ResponseWriter, r *http.Request) {
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
 		if err != nil {
 			s.error(w, r, err)
 			return

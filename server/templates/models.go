@@ -29,12 +29,12 @@ type DocumentVars struct {
 	PreviewURL string
 	PreviewAlt string
 
-	Lexers []string
-	Styles []Theme
-	Style  string
-	Theme  string
-	Max    int64
-	Host   string
+	Languages []string
+	Styles    []Theme
+	Style     string
+	Theme     string
+	Max       int64
+	Host      string
 }
 
 type File struct {

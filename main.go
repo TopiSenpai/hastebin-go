@@ -133,6 +133,10 @@ func main() {
 		assets = http.FS(sub)
 	}
 
+	if err = server.LoadLanguages(Queries, Languages); err != nil {
+		slog.Error("Error while loading languages", tint.Err(err))
+		return
+	}
 	loadEmbeddedStyles()
 	loadLocalStyles(cfg.CustomStyles)
 

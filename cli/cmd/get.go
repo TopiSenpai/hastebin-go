@@ -11,7 +11,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/topi314/chroma/v2/lexers"
 
 	"github.com/topi314/gobin/v2/internal/ezhttp"
 	"github.com/topi314/gobin/v2/server"
@@ -206,11 +205,5 @@ Will return the document with the id of jis74978.`,
 		return []string{"terminal8", "terminal16", "terminal256", "terminal16m", "html", "html-standalone", "svg", "none"}, cobra.ShellCompDirectiveNoFileComp
 	}); err != nil {
 		log.Printf("failed to register formatter flag completion func: %s", err)
-	}
-
-	if err := cmd.RegisterFlagCompletionFunc("language", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return lexers.Names(true), cobra.ShellCompDirectiveNoFileComp
-	}); err != nil {
-		log.Printf("failed to register language flag completion func: %s", err)
 	}
 }

@@ -9,6 +9,7 @@ require (
 	github.com/a-h/templ v0.2.793
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/dustin/go-humanize v1.0.1
+	github.com/ebitengine/purego v0.8.1
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/stampede v0.6.0
 	github.com/go-jose/go-jose/v3 v3.0.3
@@ -20,7 +21,6 @@ require (
 	github.com/samber/slog-chi v1.12.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
-	github.com/topi314/chroma/v2 v2.0.0-20240614212830-eb9beba2251d
 	github.com/topi314/gomigrate v0.0.0-20241004214626-bb286a22f06c
 	github.com/topi314/otelchi v0.0.0-20240303215413-6ead809329d9
 	github.com/topi314/tint v0.0.0-20240303212505-44dd4a1b4f7f
@@ -42,7 +42,6 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect

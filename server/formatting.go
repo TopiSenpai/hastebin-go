@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"go.gopad.dev/go-tree-sitter-highlight/folds"
 	"go.gopad.dev/go-tree-sitter-highlight/highlight"
@@ -13,21 +14,25 @@ import (
 	"github.com/topi314/gobin/v2/server/database"
 )
 
-func (s *Server) formatFile(file database.File, renderer *html.Renderer, theme Theme) (string, error) {
+func (s *Server) formatFile(ctx context.Context, file database.File, renderer *html.Renderer, theme Theme) (string, error) {
 	if renderer == nil {
 		return file.Content, nil
 	}
 
-	language := getLanguage(file.Language)
-
 	if s.cfg.MaxHighlightSize > 0 && len([]rune(file.Content)) > s.cfg.MaxHighlightSize {
-		language = getLanguage("plaintext")
+		return file.Content, nil
 	}
 
-	ctx := context.Background()
+	language := getLanguageFallback(file.Language)
+	if language.Language == nil {
+		return file.Content, nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	highlighter := highlight.New()
-	events, err := highlighter.Highlight(ctx, language.Highlight, []byte(file.Content), nil)
+	events, err := highlighter.Highlight(ctx, language.Highlight, []byte(file.Content), injectionLanguage)
 	if err != nil {
 		return "", fmt.Errorf("highlight: %w", err)
 	}
@@ -49,7 +54,7 @@ func (s *Server) formatFile(file database.File, renderer *html.Renderer, theme T
 	}
 
 	buff := new(bytes.Buffer)
-	if err = renderer.Render(buff, events, resolvedTags, foldsIter, []byte(file.Content), theme.CaptureNames); err != nil {
+	if err = renderer.Render(buff, events, resolvedTags, foldsIter, []byte(file.Content), theme.Theme); err != nil {
 		return "", fmt.Errorf("render: %w", err)
 	}
 

@@ -1,14 +1,16 @@
 package server
 
 import (
+	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"unsafe"
 
+	"github.com/ebitengine/purego"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/topi314/chroma/v2"
-	"github.com/topi314/chroma/v2/lexers"
 	"github.com/tree-sitter/go-tree-sitter"
 	"go.gopad.dev/go-tree-sitter-highlight/folds"
 	"go.gopad.dev/go-tree-sitter-highlight/highlight"
@@ -29,7 +31,12 @@ func registerLanguage(name string, l Language) {
 	languages[name] = l
 }
 
-func getLanguage(name string) Language {
+func getLanguage(name string) (Language, bool) {
+	l, ok := languages[name]
+	return l, ok
+}
+
+func getLanguageFallback(name string) Language {
 	l, ok := languages[name]
 	if !ok {
 		return languages["plaintext"]
@@ -37,48 +44,55 @@ func getLanguage(name string) Language {
 	return l
 }
 
+func getLanguageNames() []string {
+	names := make([]string, 0, len(languages))
+	for name := range languages {
+		names = append(names, name)
+	}
+	return names
+}
+
 func findLanguage(language string, contentType string, fileName string, content string) string {
-	var lexer chroma.Lexer
-	if language != "" {
-		lexer = lexers.Get(language)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
+	for _, lang := range languages {
+		if lang.Config.Name == language {
+			return lang.Config.Name
+		}
 
-	if contentType != "" && contentType != "application/octet-stream" {
-		lexer = lexers.MatchMimeType(contentType)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
+		if lang.Config.Name == contentType {
+			return lang.Config.Name
+		}
 
-	if contentType != "" {
-		lexer = lexers.Get(contentType)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
+		if slices.Contains(lang.Config.AltNames, language) {
+			return lang.Config.Name
+		}
 
-	if fileName != "" {
-		lexer = lexers.Match(fileName)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
-	}
+		if slices.Contains(lang.Config.MimeTypes, contentType) {
+			return lang.Config.Name
+		}
 
-	if len(content) > 0 {
-		lexer = lexers.Analyse(content)
-	}
-	if lexer != nil {
-		return lexer.Config().Name
+		if slices.Contains(lang.Config.FileTypes, fileName) {
+			return lang.Config.Name
+		}
+
+		fileType := filepath.Ext(fileName)
+		if slices.Contains(lang.Config.FileTypes, fileType) {
+			return lang.Config.Name
+		}
 	}
 
 	return "plaintext"
 }
 
+func injectionLanguage(languageName string) *highlight.Configuration {
+	lang, ok := getLanguage(languageName)
+	if !ok {
+		return nil
+	}
+	return &lang.Highlight
+}
+
 type languageConfigs struct {
-	Languages []LanguageConfig `toml:"languages"`
+	Languages map[string]LanguageConfig `toml:"languages"`
 }
 
 type LanguageConfig struct {
@@ -90,26 +104,91 @@ type LanguageConfig struct {
 	GrammarSymbolName string   `toml:"grammar_symbol_name"`
 }
 
-func LoadLanguages(data []byte) error {
+func LoadLanguages(fs embed.FS, data []byte) error {
 	var configs languageConfigs
 	if err := toml.Unmarshal(data, &configs); err != nil {
 		return err
 	}
 
-	for _, cfg := range configs.Languages {
-
+	for name, cfg := range configs.Languages {
+		cfg.Name = name
+		lang, err := loadLanguage(fs, cfg)
+		if err != nil {
+			return fmt.Errorf("failed to load language %q: %w", cfg.Name, err)
+		}
+		registerLanguage(cfg.Name, *lang)
 	}
 
 	return nil
 }
 
-func loadLanguage(cfg LanguageConfig) (*Language, error) {
-	libPath := filepath.Join("grammars", cfg.Name)
-	if _, err := os.Stat(libPath); err != nil {
+func loadLanguage(fs embed.FS, cfg LanguageConfig) (*Language, error) {
+	highlightsQuery, err := loadQuery(fs, cfg.Name, "highlights")
+	if err != nil {
 		return nil, err
 	}
 
+	injectionsQuery, err := loadQuery(fs, cfg.Name, "injections")
+	if err != nil {
+		return nil, err
+	}
 
+	localsQuery, err := loadQuery(fs, cfg.Name, "locals")
+	if err != nil {
+		return nil, err
+	}
+
+	foldsQuery, err := loadQuery(fs, cfg.Name, "folds")
+	if err != nil {
+		return nil, err
+	}
+
+	tagsQuery, err := loadQuery(fs, cfg.Name, "tags")
+	if err != nil {
+		return nil, err
+	}
+
+	libName := fmt.Sprintf("tree-sitter-%s.so", cfg.Name)
+	language, err := newLanguage(cfg.GrammarSymbolName, filepath.Join("grammars", libName))
+	if err != nil {
+		return nil, err
+	}
+
+	hlCfg, err := highlight.NewConfiguration(language, cfg.Name, highlightsQuery, injectionsQuery, localsQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	foldsCfg, err := folds.NewConfiguration(language, foldsQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	tagsCfg, err := tags.NewConfiguration(language, tagsQuery, localsQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Language{
+		Language:  language,
+		Config:    cfg,
+		Highlight: *hlCfg,
+		Folds:     *foldsCfg,
+		Tags:      *tagsCfg,
+	}, nil
+}
+
+func loadQuery(fs embed.FS, languageName string, name string) ([]byte, error) {
+	path := filepath.Join("queries", languageName, name+".scm")
+	data, err := fs.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func newLanguage(symbolName string, path string) (*tree_sitter.Language, error) {
