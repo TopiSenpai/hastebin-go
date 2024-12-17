@@ -1,0 +1,50 @@
+name = 'default-dark'
+color_scheme = 'dark'
+
+tab_size = 4
+
+[colors]
+text0 = '#F8F8F2'
+text1 = '#F8F8F2'
+text2 = '#8A8A8A'
+
+background0 = '#212122'
+background1 = '#2B2B2B'
+background2 = '#3C3C3C'
+background3 = '#43494A'
+
+white = '#FEFEF8'
+red = '#FF4352'
+blue = '#73FBF1'
+green = '#B8E466'
+yellow = '#FFD750'
+magenta = '#A578EA'
+gray = '#6D7070'
+
+[ui]
+status_bar = '$text1'
+status_bar_background = '$background1'
+status_bar_active_background = '$background2'
+
+code = '$text0'
+code_background = '$background0'
+
+line_number = '$text2'
+line_number_background = '$background1'
+highlight = '$background2'
+
+symbols = '$text1'
+symbols_background = '$background1'
+symbols_active_background = '$background3'
+synbols_kind_background = '$background1'
+
+[styles]
+"variable" = { text = '$text' }
+"variable.other.member" = { text = '$red' }
+"function" = { text = '$blue' }
+"method" = { text = '$blue' }
+"string" = { text = '$green' }
+"type" = { text = '$yellow' }
+"keyword" = { text = '$magenta' }
+"comment" = { text = '$gray' }
+"comment.todo" = { text = '$white' }

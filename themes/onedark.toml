@@ -1,0 +1,110 @@
+name = 'onedark'
+color_scheme = 'dark'
+
+tab_size = 4
+
+[colors]
+text0 = '#C8CCD4'
+text1 = '#B6BDCA'
+text2 = '#ABB2Bf'
+text3 = '#565C64'
+
+background0 = '#282C34'
+background1 = '#353b45'
+background2 = '#3e4451'
+background3 = '#545862'
+
+white = '#ABB2BF'
+black = '#282C34'
+gray = '#7F848E'
+
+red = '#E06C75'
+green = '#98C379'
+yellow = '#E5C07B'
+orange = '#D19A66'
+blue = '#61AFEF'
+cyan = '#56B6C2'
+magenta = '#C678DD'
+
+[ui]
+status_bar = '$text1'
+status_bar_background = '$background1'
+status_bar_active_background = '$background2'
+
+code = '$text0'
+code_background = '$background0'
+
+line_number = '$text2'
+line_number_background = '$background1'
+highlight = '$background2'
+
+symbols = '$text1'
+symbols_background = '$background1'
+symbols_active_background = '$background3'
+synbols_kind_background = '$background1'
+
+[styles]
+"tag" = { text = '$red' }
+"attribute" = { text = '$yellow' }
+"property" = { text = '$red' }
+"label" = { text = '$white', bold = true }
+
+"comment" = { text = '8' }
+"comment.error" = { text = '$red', bold = true }
+"comment.warning" = { text = '$yellow', bold = true }
+"comment.note" = { text = '$green', bold = true }
+"comment.todo" = { text = '$white', bold = true }
+
+"variable" = { text = '$white' }
+"variable.builtin" = { text = '$blue' }
+"variable.parameter" = { text = '$orange' }
+"variable.other" = { text = '$red' }
+"variable.other.member" = { text = '$white' }
+
+"constant" = { text = '$yellow' }
+"constant.numeric" = { text = '$orange' }
+"constant.builtin" = { text = '$red' }
+"constant.builtin.boolean" = { text = '$orange' }
+"constant.character.escape" = { text = '$cyan' }
+"constant.other.placeholder" = { text = '$cyan' }
+
+"function" = { text = '$blue' }
+
+"constructor" = { text = '$blue' }
+
+"keyword" = { text = '$magenta' }
+
+"section" = { text = '$magenta' }
+
+"punctuation" = { text = '$white' }
+"punctuation.special" = { text = '$magenta' }
+
+"operator" = { text = '$white' }
+
+"special" = { text = '$blue' }
+
+"string" = { text = '$green', bold = true }
+"string.special" = { text = '$yellow' }
+"string.special.path" = { text = '$green' }
+"string.special.url" = { text = '$blue' }
+
+"type" = { text = '$yellow' }
+
+"markup.heading" = { text = '$cyan' }
+"markup.heading.marker" = { text = '$magenta' }
+"markup.raw" = { text = '$green' }
+"markup.list" = { text = '$magenta' }
+"markup.quote" = { text = '$green' }
+"markup.link.url" = { text = '$blue', underline = true }
+"markup.link.text" = { text = '$magenta', underline = true }
+"markup.bold" = { bold = true }
+"markup.italic" = { italic = true }
+"markup.underline" = { underline = true }
+"markup.strikethrough" = { strikethrough = true }
+
+"diff.plus" = { text = '$green' }
+"diff.delta" = { text = '$yellow' }
+"diff.minus" = { text = '$red' }
+
+# Language specific styles
+"property.toml" = { text = '$magenta' }

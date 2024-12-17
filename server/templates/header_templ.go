@@ -59,7 +59,7 @@ func header(vars DocumentVars) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("></button> <button title=\"Share\" id=\"share\" class=\"icon-btn\" disabled></button></nav></header>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("></button> <button title=\"Show Documents\" id=\"documents\" class=\"icon-btn\"></button> <button title=\"Share\" id=\"share\" class=\"icon-btn\" disabled></button></nav></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

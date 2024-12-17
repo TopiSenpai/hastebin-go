@@ -365,15 +365,82 @@ GOBIN_DEFAULT_STYLE=snazzy
 
 ## Custom Themes
 
-You can add your own themes to gobin by adding the `custom_styles` directory to the config file and adding your themes
-to it.
+You can add your own themes to gobin by adding them to the `themes` directory.
 
-The themes have to be in the following format:
+### Gobin Themes
+
+Gobin themes are written in TOML file format.
+
+All keys specified under `colors` are variables which can be referenced by `$name` in the theme file.
+
+To style UI elements you can use the `ui` key. See below for all available keys.
+
+To style individual scopes you can use the `styles` key. The key is the scope and the value is the style.
+Make sure to quote the keys if the scope name contain a `.`.
+
+```toml file=themes/name.toml
+name = 'name'
+color_scheme = 'dark' # or 'light'
+
+tab_size = 4
+
+[colors]
+text0 = '#F8F8F2'
+text1 = '#F8F8F2'
+text2 = '#8A8A8A'
+
+background0 = '#212122'
+background1 = '#2B2B2B'
+background2 = '#3C3C3C'
+background3 = '#43494A'
+
+white = '#FEFEF8'
+red = '#FF4352'
+blue = '#73FBF1'
+green = '#B8E466'
+yellow = '#FFD750'
+magenta = '#A578EA'
+gray = '#6D7070'
+
+[ui]
+status_bar = '$text1'
+status_bar_background = '$background1'
+status_bar_active_background = '$background2'
+
+code = '$text0'
+code_background = '$background0'
+
+line_number = '$text2'
+line_number_background = '$background1'
+highlight = '$background2'
+
+symbols = '$text1'
+symbols_background = '$background1'
+symbols_active_background = '$background3'
+synbols_kind_background = '$background1'
+
+[styles]
+"variable" = { text = '$text' }
+"variable.other.member" = { text = '$red' }
+"function" = { text = '$blue' }
+"method" = { text = '$blue' }
+"string" = { text = '$green' }
+"type" = { text = '$yellow' }
+"keyword" = { text = '$magenta' }
+"comment" = { text = '$gray' }
+"comment.todo" = { text = '$white' }
+```
+
+### Base16 Themes
+
+Base16 themes are supported and should be placed in the `themes/base16` directory.
+
+See [base16](https://github.com/chriskempson/base16) for more information about base16 themes.
 
 ```yaml file=custom_styles/name.yaml
 scheme: "name"
 author: "author"
-theme: "dark" # or "light"
+color_scheme: "dark" # or "light"
 base00: "282a36"
 base01: "34353e"
 base02: "43454f"
@@ -392,9 +459,6 @@ base0E: "ff6ac1"
 base0F: "b2643c"
 ```
 
-See [base16](https://github.com/chriskempson/base16) for more information.
-
-Or you can use the [chroma](https://github.com/topi314/chroma/tree/master/styles/embedded) XML themes.
 
 ## Rate Limits
 

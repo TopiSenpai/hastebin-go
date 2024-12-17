@@ -207,18 +207,57 @@ document.getElementById("version").addEventListener("change", async (e) => {
     addState(state)
 });
 
-document.getElementById("style").addEventListener("change", (e) => {
-    const style = e.target.value;
-    const theme = e.target.options.item(e.target.selectedIndex).dataset.theme;
-    setCookie("style", style);
-    document.documentElement.setAttribute("data-theme", theme);
-    document.documentElement.classList.replace(theme === "dark" ? "light" : "dark", theme);
-    const themeCssElement = document.getElementById("theme-css");
+document.getElementById("theme").addEventListener("change", async (e) => {
+    const theme = e.target.value;
+    const colorScheme = e.target.options.item(e.target.selectedIndex).dataset.colorScheme;
 
+    setCookie("theme", theme);
+    document.documentElement.setAttribute("data-theme", colorScheme);
+    document.documentElement.classList.replace(colorScheme === "dark" ? "light" : "dark", colorScheme);
+
+    const themeCssElement = document.getElementById("theme-css");
     const href = new URL(themeCssElement.href);
-    href.searchParams.set("style", style);
+    href.searchParams.set("theme", theme);
     themeCssElement.href = href.toString();
+
+    const state = getState();
+
+    if (!state.key) {
+        return;
+    }
+    const doc = await fetchDocument(state.key, state.version);
+    if (!doc) {
+        return;
+    }
+
+    state.files = doc.files;
+
+    updateFiles(state)
+    updateCode(state)
+
+    addState(state)
 });
+
+document.getElementById("folds").addEventListener("change", async (e) => {
+    const checked = e.target.checked;
+
+    setCookie("folds", checked);
+
+    const state = getState();
+
+    const doc = await fetchDocument(state.key, state.version);
+    if (!doc) {
+        return;
+    }
+
+    state.files = doc.files;
+
+    updateFiles(state)
+    updateCode(state)
+
+    addState(state)
+})
+
 
 document.getElementById("expire").addEventListener("input", (e) => {
     const expireIn = parseInt(e.target.value);
@@ -445,6 +484,38 @@ document.getElementById("share-copy").addEventListener("click", async () => {
     document.getElementById("share-dialog").close();
 });
 
+document.getElementById("documents").addEventListener("click", async () => {
+    const tokens = getTokens();
+    if (!tokens) {
+        return;
+    }
+    console.log(tokens)
+
+    const documents = document.getElementById("documents-list");
+    documents.replaceChildren();
+
+    for (const [key, token] of Object.entries(tokens)) {
+        const tokenSplit = token.split(".")
+        if (tokenSplit.length !== 3) {
+            continue;
+        }
+        const data = JSON.parse(atob(tokenSplit[1]))
+        const date = new Date(data.iat * 1000);
+        const formattedDate = date.toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${key} ${formattedDate}</span><button class="documents-open"></button><button class="documents-remove"></button>`;
+
+        documents.appendChild(li);
+    }
+
+    document.getElementById("documents-dialog").showModal();
+});
+
+document.getElementById("documents-dialog-close").addEventListener("click", () => {
+    document.getElementById("documents-dialog").close();
+});
+
 async function saveDocument(key, expire, files) {
     const data = new FormData();
     for (const [i, file] of files.entries()) {
@@ -592,6 +663,14 @@ function getToken(key) {
     if (!token) return ""
 
     return token
+}
+
+function getTokens() {
+    const documents = localStorage.getItem("documents")
+    if (!documents) {
+        return;
+    }
+    return JSON.parse(documents)
 }
 
 function setToken(key, token) {

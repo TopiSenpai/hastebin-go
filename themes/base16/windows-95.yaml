@@ -1,6 +1,6 @@
 scheme: "windows-95"
 author: "Fergus Collins (https://github.com/C-Fergus)"
-theme: "dark"
+color_scheme: "dark"
 base00: "000000" # black
 base01: "1C1C1C" # darkish black
 base02: "383838" # brightish black

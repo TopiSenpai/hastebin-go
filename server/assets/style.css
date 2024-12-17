@@ -26,11 +26,11 @@
     --new: url("/assets/icons/dark/new.png");
     --raw: url("/assets/icons/dark/raw.png");
     --save: url("/assets/icons/dark/save.png");
-    --style: url("/assets/icons/dark/style.png");
     --share: url("/assets/icons/dark/share.png");
     --close: url("/assets/icons/dark/close.png");
     --version: url("/assets/icons/dark/version.png");
     --theme: url("/assets/icons/dark/theme.png");
+    --documents: url("/assets/icons/dark/documents.png");
 }
 
 .light {
@@ -45,15 +45,16 @@
     --new: url("/assets/icons/light/new.png");
     --raw: url("/assets/icons/light/raw.png");
     --save: url("/assets/icons/light/save.png");
-    --style: url("/assets/icons/light/style.png");
     --share: url("/assets/icons/light/share.png");
     --close: url("/assets/icons/light/close.png");
     --version: url("/assets/icons/light/version.png");
     --theme: url("/assets/icons/light/theme.png");
+    --documents: url("/assets/icons/light/documents.png");
 }
 
 html {
-    background-color: var(--bg-primary);
+    color: var(--code-color);
+    background-color: var(--code-background-color);
 }
 
 *,
@@ -63,18 +64,14 @@ html {
 }
 
 ::-webkit-scrollbar {
-    background-color: var(--bg-scrollbar);
+    background-color: var(--status-bar-background-color);
     border-radius: 1rem;
     width: 0.5rem;
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: var(--bg-scrollbar-thumb);
+    background-color: var(--status-bar-color);
     border-radius: 1rem;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--bg-scrollbar-thumb-hover);
 }
 
 #error-popup {
@@ -90,32 +87,34 @@ html {
     transition: all 0.5s ease;
 }
 
-#share-dialog {
-    color: var(--text-primary);
+dialog {
+    color: var(--code-color);
     border: none;
     border-radius: 1rem;
-    padding: 1rem;
-    background-color: var(--bg-secondary);
+    padding: 0;
+    background-color: var(--code-background-color);
 }
 
 dialog::backdrop {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
-.share-dialog-header {
+.dialog-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1rem;
+    background-color: var(--status-bar-background-color);
 }
 
-.share-dialog-header h2 {
+.dialog-header h2 {
     font-size: 1.5rem;
     font-weight: bold;
     margin: 0;
 }
 
-#share-dialog-close {
-    background-image: var(--close);
+.dialog-body {
+    padding: 1rem;
 }
 
 .share-dialog-main {
@@ -133,6 +132,11 @@ dialog::backdrop {
     align-items: center;
 }
 
+#documents-dialog {
+    width: 80%;
+    height: 80%;
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -145,13 +149,14 @@ body {
 }
 
 header {
-    background: var(--bg-secondary);
+    color: var(--status-bar-color);
+    background: var(--status-bar-background-color);
     display: flex;
     gap: 1rem;
     align-items: center;
     height: 4rem;
     padding: 1rem;
-    border-bottom: 1px solid var(--bg-primary);
+    border-bottom: 1px solid var(--code-background-color);
 }
 
 #nav-btn {
@@ -163,7 +168,7 @@ header {
     font-size: 2rem;
     font-weight: bold;
     text-decoration: none;
-    color: var(--text-primary);
+    color: inherit;
     user-select: none;
 }
 
@@ -183,7 +188,7 @@ header {
     position: relative;
     height: 2px;
     width: 2rem;
-    background-color: var(--text-primary);
+    background-color: var(--status-bar-color);
 }
 
 .hamb span::before,
@@ -193,7 +198,7 @@ header {
     height: 100%;
     width: 100%;
     transition: all .2s ease-out;
-    background-color: var(--text-primary);
+    background-color: var(--status-bar-color);
 }
 
 .hamb span::before {
@@ -235,10 +240,11 @@ nav {
     width: 100%;
     padding: 0 1rem 0 1rem;
     height: 0;
-    border-top: 1px solid var(--bg-primary);
+    border-top: 1px solid var(--code-background-color);
     overflow: hidden;
-    background-color: var(--bg-secondary);
+    background-color: var(--status-bar-background-color);
     transition: height 0.2s ease-out, padding-top 0.2s ease-out;
+    z-index: 2;
 }
 
 .icon-btn {
@@ -247,12 +253,12 @@ nav {
     border-radius: 1rem;
     width: 2rem;
     height: 2rem;
-    background-color: var(--nav-button-bg);
+    background-color: var(--status-bar-active-background-color);
     background-repeat: no-repeat;
     background-position: center;
     background-size: 1rem;
     cursor: pointer;
-    color: var(--text-primary);
+    color: inherit;
 }
 
 .icon-btn:hover {
@@ -267,8 +273,7 @@ nav {
 #share-copy {
     border: none;
     border-radius: 1rem;
-    background-color: var(--nav-button-bg);
-    color: var(--text-primary);
+    background-color: var(--status-bar-active-background-color);
     padding: 0.5rem;
     cursor: pointer;
     font-size: 1.1rem;
@@ -293,8 +298,8 @@ main {
     display: flex;
     flex-wrap: wrap;
 
-    color: var(--text-secondary);
-    background-color: var(--bg-secondary);
+    color: var(--status-bar-color);
+    background-color: var(--status-bar-background-color);
 }
 
 #files input[type="radio"] {
@@ -309,8 +314,8 @@ main {
     padding: 0.2rem 0.3rem 0.2rem 1rem;
     /*flex-grow: 1;*/
 
-    border-right: 1px solid var(--bg-primary);
-    border-bottom: 1px solid var(--bg-primary);
+    border-right: 1px solid var(--code-background-color);
+    border-bottom: 1px solid var(--code-background-color);
     user-select: none;
 }
 
@@ -319,8 +324,8 @@ main {
 }
 
 #files input[type="radio"]:checked + label {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    color: var(--code-color);
+    background-color: var(--code-background-color);
 }
 
 .file-remove {
@@ -329,7 +334,7 @@ main {
     padding: 0;
     cursor: pointer;
     border: none;
-    color: var(--text-secondary);
+    color: var(--status-bar-color);
     border-radius: 4px;
 
     background-color: transparent;
@@ -340,7 +345,7 @@ main {
 }
 
 .file-remove:hover:not(:disabled) {
-    background-color: var(--nav-button-bg);
+    background-color: var(--status-bar-active-background-color);
 }
 
 .file-remove:disabled {
@@ -381,13 +386,17 @@ main {
 
 #code-view {
     width: 0;
+    height: 0;
     min-width: 100%;
+    min-height: 100%;
     overflow: auto;
-    padding: 1em;
+    padding-top: 1rem;
+    display: grid;
+    position: relative;
 }
 
 #code-edit {
-    color: var(--text-primary);
+    color: var(--code-color);
     background-color: transparent;
     flex-grow: 1;
     resize: none;
@@ -413,7 +422,8 @@ label[for="code-edit"].invalid {
 }
 
 #footer {
-    background-color: var(--bg-secondary);
+    color: var(--status-bar-color);
+    background-color: var(--status-bar-background-color);
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -427,7 +437,7 @@ label[for="code-edit"].invalid {
     text-align: center;
     margin-left: auto;
     margin-right: auto;
-    color: var(--text-primary);
+    color: var(--text-error);
 }
 
 .error h1 {
@@ -448,11 +458,11 @@ select {
     font-family: inherit;
     user-select: none;
 
-    color: var(--text-primary);
+    color: var(--status-bar-color);
     border: none;
     cursor: pointer;
 
-    background-color: var(--bg-secondary);
+    background-color: var(--status-bar-background-color);
     background-repeat: no-repeat;
     background-position: left 0.5rem center;
     background-size: 1rem;
@@ -460,7 +470,7 @@ select {
 
 select:hover,
 select:focus {
-    background-color: var(--nav-button-bg);
+    background-color: var(--status-bar-active-background-color);
 }
 
 select:disabled {
@@ -472,7 +482,7 @@ button:focus,
 select:focus,
 span[contenteditable]:focus,
 label:has(> input[type="number"]:focus) {
-    outline: var(--text-primary) 1px solid;
+    outline: var(--status-bar-color) 1px solid;
 }
 
 input[type="number"]:focus {
@@ -494,14 +504,14 @@ input[type="number"] {
 }
 
 label:has(> input[type="number"]) {
-    color: var(--text-primary);
+    color: var(--status-bar-color);
 
-    background-color: var(--bg-secondary);
+    background-color: var(--status-bar-background-color);
 }
 
 label:has(> input[type="number"]:hover),
 label:has(> input[type="number"]:focus) {
-    background-color: var(--nav-button-bg);
+    background-color: var(--status-bar-active-background-color);
 }
 
 label:has(> input[type="number"]:disabled) {
@@ -517,13 +527,17 @@ label[for="expire"] {
     user-select: none;
 }
 
+.dialog-close {
+    background-image: var(--close);
+}
+
 #language {
     background-image: var(--language);
     max-width: 10rem;
 }
 
-#style {
-    background-image: var(--style);
+#theme {
+    background-image: var(--theme);
 }
 
 #version {
@@ -562,8 +576,8 @@ label[for="expire"] {
     background-image: var(--share);
 }
 
-#theme-toggle + label {
-    background-image: var(--theme);
+#documents {
+    background-image: var(--documents);
 }
 
 .loading {

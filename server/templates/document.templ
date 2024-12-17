@@ -7,32 +7,44 @@ import (
 
 templ Document(vars DocumentVars) {
 	<!DOCTYPE html>
-	<html lang="en" class={ vars.Theme }>
+	<html lang="en" class={ vars.ColorScheme }>
 	@head(vars)
 	<body>
 	<div id="error-popup" style="display: none;"></div>
     <dialog id="share-dialog">
-        <div class="share-dialog-header">
+        <div class="dialog-header">
             <h2>Share</h2>
-            <button id="share-dialog-close" class="icon-btn"></button>
+            <button id="share-dialog-close" class="icon-btn dialog-close"></button>
         </div>
-        <p>Share this URL with your friends and let them edit or delete the document.</p>
-        <h3>Permissions</h3>
-        <div class="share-dialog-main">
-            <div class="share-dialog-permissions">
-                <label for="share-permissions-write">Write</label>
-                <input id="share-permissions-write" type="checkbox"/>
+        <div class="dialog-body">
+            <p>Share this URL with your friends and let them edit or delete the document.</p>
+            <h3>Permissions</h3>
+            <div class="share-dialog-main">
+                <div class="share-dialog-permissions">
+                    <label for="share-permissions-write">Write</label>
+                    <input id="share-permissions-write" type="checkbox"/>
 
-                <label for="share-permissions-delete">Delete</label>
-                <input id="share-permissions-delete" type="checkbox"/>
+                    <label for="share-permissions-delete">Delete</label>
+                    <input id="share-permissions-delete" type="checkbox"/>
 
-                <label for="share-permissions-share">Share</label>
-                <input id="share-permissions-share" type="checkbox"/>
+                    <label for="share-permissions-share">Share</label>
+                    <input id="share-permissions-share" type="checkbox"/>
 
-                <label for="share-permissions-webhook">Webhook</label>
-                <input id="share-permissions-webhook" type="checkbox"/>
+                    <label for="share-permissions-webhook">Webhook</label>
+                    <input id="share-permissions-webhook" type="checkbox"/>
+                </div>
+                <button id="share-copy">Copy</button>
             </div>
-            <button id="share-copy">Copy</button>
+        </div>
+    </dialog>
+
+    <dialog id="documents-dialog">
+        <div class="dialog-header">
+        	<h2>Documents</h2>
+			<button id="documents-dialog-close" class="icon-btn dialog-close"></button>
+        </div>
+        <div class="dialog-body">
+            <ul id="documents-list"></ul>
         </div>
     </dialog>
 	@header(vars)
@@ -70,17 +82,21 @@ templ Document(vars DocumentVars) {
                     <option title={ version.Time } value={ strconv.FormatInt(version.Version, 10) } selected?={ version.Version == vars.Version }>{ version.Label }</option>
                 }
             </select>
-            <select title="Style" id="style" autocomplete="off">
-                for _, style := range vars.Styles {
-                    <option value={ style.Name } data-theme={ style.Theme } selected?={ vars.Style == style.Name }>{ style.Name }</option>
+            <select title="Theme" id="theme" autocomplete="off">
+                for _, theme := range vars.Themes {
+                    <option value={ theme.Name } data-color-scheme={ theme.ColorScheme } selected?={ vars.Theme == theme.Name }>{ theme.Name }</option>
                 }
             </select>
+            <label for="folds">
+                <input id="folds" type="checkbox" checked?={ vars.Folds }/>
+				Folds
+            </label>
             <label for="expire"
 				if !vars.Edit {
 				    style="display: none;"
 				}
             >
-            	<input title="Expire in" id="expire" type="number" min="0" placeholder="expire in"/>h
+                <input title="Expire in" id="expire" type="number" min="0" placeholder="expire in"/>h
 			</label>
             <div class="spacer"></div>
 			<label for="code-edit">

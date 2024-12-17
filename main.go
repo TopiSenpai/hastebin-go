@@ -12,8 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/go-jose/go-jose/v3"
-	"github.com/mattn/go-colorable"
+	"github.com/muesli/termenv"
 	"github.com/topi314/gomigrate"
 	"github.com/topi314/gomigrate/drivers/postgres"
 	"github.com/topi314/gomigrate/drivers/sqlite"
@@ -51,6 +52,9 @@ var (
 
 	//go:embed queries/*
 	Queries embed.FS
+
+	//go:embed themes/*
+	Themes embed.FS
 )
 
 func main() {
@@ -137,8 +141,11 @@ func main() {
 		slog.Error("Error while loading languages", tint.Err(err))
 		return
 	}
-	loadEmbeddedStyles()
-	loadLocalStyles(cfg.CustomStyles)
+
+	if err = server.LoadThemes(Themes); err != nil {
+		slog.Error("Error while loading themes", tint.Err(err))
+		return
+	}
 
 	htmlRenderer := html.NewRenderer(nil)
 
@@ -152,70 +159,29 @@ func main() {
 	<-si
 }
 
-const (
-	ansiFaint         = "\033[2m"
-	ansiWhiteBold     = "\033[37;1m"
-	ansiYellowBold    = "\033[33;1m"
-	ansiCyanBold      = "\033[36;1m"
-	ansiCyanBoldFaint = "\033[36;1;2m"
-	ansiRedFaint      = "\033[31;2m"
-	ansiRedBold       = "\033[31;1m"
-
-	ansiRed     = "\033[31m"
-	ansiYellow  = "\033[33m"
-	ansiGreen   = "\033[32m"
-	ansiMagenta = "\033[35m"
-)
-
 func setupLogger(cfg server.LogConfig) {
-	var handler slog.Handler
+	var formatter log.Formatter
 	switch cfg.Format {
 	case server.LogFormatJSON:
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			AddSource: cfg.AddSource,
-			Level:     cfg.Level,
-		})
-
+		formatter = log.JSONFormatter
 	case server.LogFormatText:
-		handler = tint.NewHandler(colorable.NewColorable(os.Stdout), &tint.Options{
-			AddSource: cfg.AddSource,
-			Level:     cfg.Level,
-			NoColor:   cfg.NoColor,
-			LevelColors: map[slog.Level]string{
-				slog.LevelDebug: ansiMagenta,
-				slog.LevelInfo:  ansiGreen,
-				slog.LevelWarn:  ansiYellow,
-				slog.LevelError: ansiRed,
-			},
-			Colors: map[tint.Kind]string{
-				tint.KindTime:            ansiYellowBold,
-				tint.KindSourceFile:      ansiCyanBold,
-				tint.KindSourceSeparator: ansiCyanBoldFaint,
-				tint.KindSourceLine:      ansiCyanBold,
-				tint.KindMessage:         ansiWhiteBold,
-				tint.KindKey:             ansiFaint,
-				tint.KindSeparator:       ansiFaint,
-				tint.KindValue:           ansiWhiteBold,
-				tint.KindErrorKey:        ansiRedFaint,
-				tint.KindErrorSeparator:  ansiFaint,
-				tint.KindErrorValue:      ansiRedBold,
-			},
-		})
+		formatter = log.TextFormatter
+	case server.LogFormatLogFMT:
+		formatter = log.LogfmtFormatter
 	default:
 		slog.Error("Unknown log format", slog.String("format", string(cfg.Format)))
 		os.Exit(-1)
 	}
-	slog.SetDefault(slog.New(handler))
-}
 
-func loadEmbeddedStyles() {
-	slog.Info("Loading embedded styles")
-}
-
-func loadLocalStyles(stylesDir string) {
-	if stylesDir == "" {
-		return
+	handler := log.NewWithOptions(os.Stdout, log.Options{
+		Level:           log.Level(cfg.Level),
+		ReportTimestamp: true,
+		ReportCaller:    cfg.AddSource,
+		Formatter:       formatter,
+	})
+	if cfg.Format == server.LogFormatText && !cfg.NoColor {
+		handler.SetColorProfile(termenv.TrueColor)
 	}
 
-	slog.Info("Loading local styles", slog.String("dir", stylesDir))
+	slog.SetDefault(slog.New(handler))
 }

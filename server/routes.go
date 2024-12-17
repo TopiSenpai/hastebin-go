@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 	"time"
 
@@ -56,7 +57,21 @@ func (s *Server) Routes() http.Handler {
 	r.Use(middleware.GetHead)
 
 	if s.cfg.Debug {
-		r.Mount("/debug", middleware.Profiler())
+		middleware.Profiler()
+		r.Route("/debug", func(r chi.Router) {
+			r.Get("/pprof", pprof.Index)
+			r.Get("/cmdline", pprof.Cmdline)
+			r.Get("/profile", pprof.Profile)
+			r.Get("/symbol", pprof.Symbol)
+			r.Get("/trace", pprof.Trace)
+
+			r.Get("/goroutine", pprof.Handler("goroutine").ServeHTTP)
+			r.Get("/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
+			r.Get("/mutex", pprof.Handler("mutex").ServeHTTP)
+			r.Get("/heap", pprof.Handler("heap").ServeHTTP)
+			r.Get("/block", pprof.Handler("block").ServeHTTP)
+			r.Get("/allocs", pprof.Handler("allocs").ServeHTTP)
+		})
 	}
 
 	var previewCache func(http.Handler) http.Handler

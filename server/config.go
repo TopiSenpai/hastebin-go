@@ -125,8 +125,9 @@ func (c Config) String() string {
 type LogFormat string
 
 const (
-	LogFormatJSON LogFormat = "json"
-	LogFormatText LogFormat = "text"
+	LogFormatJSON   LogFormat = "json"
+	LogFormatText   LogFormat = "text"
+	LogFormatLogFMT LogFormat = "log-fmt"
 )
 
 type LogConfig struct {

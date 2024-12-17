@@ -95,6 +95,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	var response []DocumentResponse
 	for version, dbFiles := range versions {
@@ -102,7 +103,7 @@ func (s *Server) DocumentVersions(w http.ResponseWriter, r *http.Request) {
 		for i, file := range dbFiles {
 			var formatted string
 			if withContent {
-				formatted, err = s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+				formatted, err = s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -162,6 +163,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 	fileName := r.URL.Query().Get("file")
 
 	var (
@@ -170,7 +172,7 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 	)
 	templateFiles := make([]templates.File, len(document.Files))
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.prettyError(w, r, err)
 			return
@@ -229,10 +231,11 @@ func (s *Server) GetPrettyDocument(w http.ResponseWriter, r *http.Request) {
 		TotalLength: totalLength,
 		Versions:    templateVersions,
 
-		Languages: getLanguageNames(),
-		Styles:    s.themes,
-		Style:     theme.Name,
-		Theme:     theme.ColorScheme,
+		Languages:   getLanguageNames(),
+		Themes:      s.themes,
+		Theme:       theme.Name,
+		ColorScheme: theme.ColorScheme,
+		Folds:       folds,
 
 		Max:        s.cfg.MaxDocumentSize,
 		Host:       r.Host,
@@ -251,6 +254,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 	fileName := r.URL.Query().Get("file")
 
 	if fileName != "" {
@@ -260,7 +264,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 					file.Language = getLanguageFallback(language).Config.Name
 				}
 
-				formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+				formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 				if err != nil {
 					s.error(w, r, err)
 					return
@@ -284,7 +288,7 @@ func (s *Server) GetDocument(w http.ResponseWriter, r *http.Request) {
 		Files:   make([]ResponseFile, len(document.Files)),
 	}
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -308,11 +312,12 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	if len(document.Files) == 1 {
 		file := document.Files[0]
 
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
@@ -338,7 +343,7 @@ func (s *Server) GetRawDocument(w http.ResponseWriter, r *http.Request) {
 
 	mpw := multipart.NewWriter(w)
 	for i, file := range document.Files {
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 			return
@@ -471,12 +476,13 @@ func (s *Server) GetDocumentFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	if language := r.URL.Query().Get("language"); language != "" {
 		file.Language = getLanguageFallback(language).Config.Name
 	}
 
-	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme)
+	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme, folds)
 	if err != nil {
 		s.error(w, r, err)
 		return
@@ -498,11 +504,12 @@ func (s *Server) GetRawDocumentFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	language := getLanguageFallback(file.Language)
 	w.Header().Set(ezhttp.HeaderLanguage, language.Config.Name)
 
-	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme)
+	formatted, err := s.formatFile(r.Context(), *file, s.htmlRenderer, theme, folds)
 	if err != nil {
 		s.error(w, r, fmt.Errorf("failed to render raw document: %w", err))
 		return
@@ -591,10 +598,11 @@ func (s *Server) PostDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -659,10 +667,11 @@ func (s *Server) PatchDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	theme := getTheme(r)
+	folds := getFolds(r)
 
 	var rsFiles []ResponseFile
 	for _, file := range dbFiles {
-		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme)
+		formatted, err := s.formatFile(r.Context(), file, s.htmlRenderer, theme, folds)
 		if err != nil {
 			s.error(w, r, err)
 			return
@@ -951,4 +960,30 @@ func getExpiresAt(query url.Values, header http.Header) (*time.Time, error) {
 		return nil, httperr.BadRequest(ErrInvalidExpiresAt)
 	}
 	return &expiresAt, nil
+}
+
+func getFolds(r *http.Request) bool {
+	var folds *bool
+
+	if foldsStr, err := r.Cookie("folds"); err == nil {
+		if parsedFolds, err := strconv.ParseBool(foldsStr.Value); err == nil {
+			folds = &parsedFolds
+		}
+	}
+
+	if queryFolds := r.URL.Query().Get("folds"); queryFolds != "" {
+		if parsedFolds, err := strconv.ParseBool(queryFolds); err == nil {
+			folds = &parsedFolds
+		}
+	}
+
+	if folds == nil && strings.Contains(r.UserAgent(), "Firefox") {
+		return true
+	}
+
+	if folds == nil {
+		return false
+	}
+
+	return *folds
 }

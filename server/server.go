@@ -29,8 +29,8 @@ func NewServer(version string, debug bool, cfg Config, db *database.DB, signer j
 	var allThemes []templates.Theme
 	for name, theme := range themes {
 		allThemes = append(allThemes, templates.Theme{
-			Name:  name,
-			Theme: theme.ColorScheme,
+			Name:        name,
+			ColorScheme: theme.ColorScheme,
 		})
 	}
 
